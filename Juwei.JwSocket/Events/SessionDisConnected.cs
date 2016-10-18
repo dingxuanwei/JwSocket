@@ -10,12 +10,12 @@ namespace Juwei.JwSocket
     /// </summary>
     public class SessionDisConnected:EventArgs
     {
-        public string SessionName { get; set; }
+        public string SessionID { get; set; }
         public string CloseReason { get; set; }
 
-        public SessionDisConnected(string sessionname,string closereason)
+        public SessionDisConnected(string sessionid,string closereason)
         {
-            this.SessionName = sessionname;
+            this.SessionID = sessionid;
             this.CloseReason = closereason;
         }
     }

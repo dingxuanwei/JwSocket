@@ -10,12 +10,14 @@ namespace Juwei.JwSocket
     /// </summary>
     public class SessionReceiveMessage : EventArgs
     {
-        public string SessionName { get; set; }
-        public string Message { get; set; }
-        public SessionReceiveMessage(string sessionname, string message)
+        public string SessionID { get; set; }
+        public byte[] ReceBuffer { get; set; }
+        public int BufferSize { get; set; }
+        public SessionReceiveMessage(string sessionid, byte[] receMsg,int bufferSize)
         {
-            this.SessionName = sessionname;
-            this.Message = message;
+            this.SessionID = sessionid;
+            this.ReceBuffer = receMsg;
+            this.BufferSize = bufferSize;
         }
     }
 }

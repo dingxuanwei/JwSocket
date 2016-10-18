@@ -83,6 +83,7 @@ namespace Juwei.JwSocket
 
                 thread = new Thread(ServerRunListen);
                 thread.Start();
+
             }
             catch (Exception e)
             {
@@ -109,52 +110,47 @@ namespace Juwei.JwSocket
               //  Console.WriteLine(e.ToString());
             }
         }
-
+        
         private void AcceptCallback(IAsyncResult ar)
         {
             allDone.Set();
             Socket listener = (Socket)ar.AsyncState;
             Socket handler = listener.EndAccept(ar);
-            StateObject state = new StateObject();
-            state.workSocket = handler;
-            if (Sessions.ContainsKey(handler.RemoteEndPoint.ToString())) Sessions.Remove(handler.RemoteEndPoint.ToString());
-            Sessions.Add(handler.RemoteEndPoint.ToString(), new AppSession(handler));
-            OnNewSessionConnected(new NewSessionConnected(handler.RemoteEndPoint.ToString()));              //新连接上线
-            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+            AppSession newSession = new AppSession(handler);
+            if (Sessions.ContainsKey(newSession.SessionID)) Sessions.Remove(newSession.SessionID);
+            Sessions.Add(newSession.SessionID, newSession);
+            OnNewSessionConnected(new NewSessionConnected(newSession.SessionID));              //新连接上线
+            handler.BeginReceive(newSession.ReceBytes, 0, newSession.ReceBytes.Length, 0, new AsyncCallback(ReadCallback), newSession);
         }
 
         public void ReadCallback(IAsyncResult ar)
         {
             try
             {
-                String content = String.Empty;
-                StateObject state = (StateObject)ar.AsyncState;
-                Socket handler = state.workSocket;
+                String bytecontent = String.Empty;
+                AppSession session = (AppSession)ar.AsyncState;
+                Socket handler = session.clientSocket;
                 if (handler != null)
                 {
                     int bytesRead = handler.EndReceive(ar);
                     if (bytesRead > 0)
                     {
-                        content = GetString(state.buffer, bytesRead);
-                        LogHelper.WriteLog(typeof(AppServer), "原始[" + handler.RemoteEndPoint.ToString() + "]" + ":"
-                    + content);
-                        string str = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
-                        if (str.Contains("GET"))
-                        { }
-                        else
-                        {
-                            //   state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
-                            // content = state.sb.ToString();
-                            OnReceiveMessage(new SessionReceiveMessage(handler.RemoteEndPoint.ToString(), content));            //接收到新的消息
-                            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
-                            state.sb.Clear();
-                        }
+                        bytecontent = GetString(session.ReceBytes, bytesRead);
+                        LogHelper.WriteLog(typeof(AppServer), "原始[" + session.SessionID + "]" + ":" + bytecontent);
+
+                        OnReceiveMessage(new SessionReceiveMessage(session.SessionID, session.ReceBytes, bytesRead));            //接收到新的消息
+                        handler.BeginReceive(session.ReceBytes, 0, session.ReceBytes.Length, 0, new AsyncCallback(ReadCallback), session);
                     }
                     else
                     {
-                        if (Sessions.ContainsKey(handler.RemoteEndPoint.ToString())) Sessions.Remove(handler.RemoteEndPoint.ToString());
-                        OnSessionDisConnected(new SessionDisConnected(handler.RemoteEndPoint.ToString(), "客户端已关闭"));
+                        if (Sessions.ContainsKey(session.SessionID)) {
+                            session.Dispose();
+                            Sessions.Remove(session.SessionID); }
+                        OnSessionDisConnected(new SessionDisConnected(session.SessionID, "客户端已关闭"));
                     }
+                }
+                else {
+                    throw new Exception("接收数据时，Socket连接不能为空！");
                 }
             }
             //   catch (System.ObjectDisposedException)
@@ -203,16 +199,13 @@ namespace Juwei.JwSocket
             }
         }
 
-        public AppSession GetSessionByName(string sessionName)
+        public AppSession GetSessionByID(string sessionid)
         {
-            if (Sessions.ContainsKey(sessionName))
-            {
-                return Sessions[sessionName];
-            }
-            return null;
+            if (Sessions.ContainsKey(sessionid))
+                return Sessions[sessionid];
+            else
+                return null;
         }
-
-
 
         private string GetString(byte[] bt, int iLength)
         {

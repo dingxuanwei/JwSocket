@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Juwei.JwSocket;
+using System.Net;
 
 namespace SocketDemo
 {
@@ -11,28 +13,26 @@ namespace SocketDemo
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("主线程测试开始...");
-            AsyncMethod();
-            Thread.Sleep(1000);
-            Console.WriteLine("主线程测试结束...");
+            AppServer appServer = new AppServer(IPAddress.Any,8888);
+            appServer.NewSessionConnected += AppServer_NewSessionConnected;
+            appServer.ReceiveMessage += AppServer_ReceiveMessage;
+            appServer.SessionDisConnected += AppServer_SessionDisConnected;
+            appServer.ServerStart();
+
             Console.ReadLine();
         }
-
-        static async void AsyncMethod()
+        private static void AppServer_NewSessionConnected(NewSessionConnected connected)
         {
-            Console.WriteLine("开始异步代码");
-            var result = await MyMethod(10);
-            Console.WriteLine("异步代码执行完毕");
+            Console.WriteLine("New Session:" + connected.SessionName);
+        }
+        private static void AppServer_ReceiveMessage(SessionReceiveMessage msg)
+        {
+            Console.WriteLine("Receive New Message:" + Encoding.ASCII.GetString(msg.ReceBuffer, 0, msg.BufferSize));
         }
 
-        static async Task<int> MyMethod(int index)
+        private static void AppServer_SessionDisConnected(SessionDisConnected disconnected)
         {
-            for (int i = 0; i < index; i++)
-            {
-                Console.WriteLine("异步执行 " + i.ToString() + "...");
-                await Task.Delay(1000); //模拟耗时操作
-            }
-            return 0;
+            Console.WriteLine("Session " + disconnected.SessionID + " Closed.Resean:" + disconnected.CloseReason);
         }
     }
 }

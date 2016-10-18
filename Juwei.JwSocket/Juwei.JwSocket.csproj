@@ -50,7 +50,6 @@
     <Compile Include="Log\LogFileCreate.cs" />
     <Compile Include="Log\WinLog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StateObject.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj">

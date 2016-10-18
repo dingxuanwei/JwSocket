@@ -10,10 +10,14 @@ namespace Juwei.JwSocket
     public class AppSession : IDisposable
     {
         public Socket clientSocket { get; set; }
+        public string SessionID { get; set; }
+        public byte[] ReceBytes { get; set; }
 
         public AppSession(Socket socket)
         {
             this.clientSocket = socket;
+            this.SessionID = Guid.NewGuid().ToString();
+            ReceBytes = new byte[1024 * 1024];
         }
 
         public void Send(string message, Encoding encode, bool isbyte=false)
