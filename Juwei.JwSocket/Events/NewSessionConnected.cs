@@ -10,10 +10,12 @@ namespace Juwei.JwSocket
     /// </summary>
     public class NewSessionConnected : EventArgs
     {
-        public string SessionName { get; set; }
-        public NewSessionConnected(string sessionname)
+        public string SessionID { get; set; }
+        public string IP { get; set; }
+        public NewSessionConnected(string sessionid,string ip)
         {
-            this.SessionName = sessionname;
+            this.SessionID = sessionid;
+            this.IP = ip;
         }
     }
 }

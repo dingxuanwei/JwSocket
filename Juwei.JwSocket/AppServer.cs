@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -15,8 +16,9 @@ namespace Juwei.JwSocket
         private Socket socketServer = null;
         private static ManualResetEvent allDone = new ManualResetEvent(false);
         private Thread thread = null;
+        private Timer timer;
 
-        private Dictionary<string, AppSession> Sessions = new Dictionary<string, AppSession>();
+        private ConcurrentDictionary<string, AppSession> Sessions = new ConcurrentDictionary<string, AppSession>();
 
         #region 新连接上线事件
         public delegate void NewSessionConnectedHandler(NewSessionConnected connected);
@@ -117,9 +119,9 @@ namespace Juwei.JwSocket
             Socket listener = (Socket)ar.AsyncState;
             Socket handler = listener.EndAccept(ar);
             AppSession newSession = new AppSession(handler);
-            if (Sessions.ContainsKey(newSession.SessionID)) Sessions.Remove(newSession.SessionID);
-            Sessions.Add(newSession.SessionID, newSession);
-            OnNewSessionConnected(new NewSessionConnected(newSession.SessionID));              //新连接上线
+            if (Sessions.ContainsKey(newSession.SessionID)) { AppSession sn = new AppSession(); Sessions.TryRemove(newSession.SessionID, out sn); }
+            Sessions.TryAdd(newSession.SessionID, newSession);
+            OnNewSessionConnected(new NewSessionConnected(newSession.SessionID, newSession.clientSocket.RemoteEndPoint.ToString()));              //新连接上线
             handler.BeginReceive(newSession.ReceBytes, 0, newSession.ReceBytes.Length, 0, new AsyncCallback(ReadCallback), newSession);
         }
 
@@ -127,26 +129,42 @@ namespace Juwei.JwSocket
         {
             try
             {
-                String bytecontent = String.Empty;
                 AppSession session = (AppSession)ar.AsyncState;
+                String bytecontent = String.Empty;
                 Socket handler = session.clientSocket;
                 if (handler != null)
                 {
-                    int bytesRead = handler.EndReceive(ar);
-                    if (bytesRead > 0)
+                    if (handler.Connected)
                     {
-                        bytecontent = GetString(session.ReceBytes, bytesRead);
-                        LogHelper.WriteLog(typeof(AppServer), "原始[" + session.SessionID + "]" + ":" + bytecontent);
+                        int bytesRead = handler.EndReceive(ar);
+                        if (bytesRead > 0)
+                        {
+                            bytecontent = GetString(session.ReceBytes, bytesRead);
+                            LogHelper.WriteLog(typeof(AppServer), "[" + session.SessionID + "]" + ":" + bytecontent);
 
-                        OnReceiveMessage(new SessionReceiveMessage(session.SessionID, session.ReceBytes, bytesRead));            //接收到新的消息
-                        handler.BeginReceive(session.ReceBytes, 0, session.ReceBytes.Length, 0, new AsyncCallback(ReadCallback), session);
+                            OnReceiveMessage(new SessionReceiveMessage(session.SessionID, session.ReceBytes, bytesRead));            //接收到新的消息
+                            handler.BeginReceive(session.ReceBytes, 0, session.ReceBytes.Length, 0, new AsyncCallback(ReadCallback), session);
+                        }
+                        else
+                        {
+                            if (Sessions.ContainsKey(session.SessionID))
+                            {
+                                session.Dispose();
+                                AppSession sn = new AppSession();
+                                Sessions.TryRemove(session.SessionID, out sn);
+                                sn = null;
+                                //GC.Collect();
+                            }
+                            OnSessionDisConnected(new SessionDisConnected(session.SessionID, "客户端已关闭"));
+                        }
                     }
                     else
                     {
-                        if (Sessions.ContainsKey(session.SessionID)) {
-                            session.Dispose();
-                            Sessions.Remove(session.SessionID); }
-                        OnSessionDisConnected(new SessionDisConnected(session.SessionID, "客户端已关闭"));
+                        session.Dispose();
+                        AppSession sn = new AppSession();
+                        Sessions.TryRemove(session.SessionID, out sn);
+                        sn = null;
+                        //GC.Collect();
                     }
                 }
                 else {

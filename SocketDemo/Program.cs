@@ -23,7 +23,7 @@ namespace SocketDemo
         }
         private static void AppServer_NewSessionConnected(NewSessionConnected connected)
         {
-            Console.WriteLine("New Session:" + connected.SessionName);
+            Console.WriteLine("New Session:" + connected.SessionID + ",IP:" + connected.IP);
         }
         private static void AppServer_ReceiveMessage(SessionReceiveMessage msg)
         {
