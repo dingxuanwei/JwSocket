@@ -17,6 +17,7 @@ namespace Juwei.JwSocket
         private static ManualResetEvent allDone = new ManualResetEvent(false);
         private Thread thread = null;
         private Timer timer;
+        private byte[] Buffer = new byte[1024 * 1024];
 
         private ConcurrentDictionary<string, AppSession> Sessions = new ConcurrentDictionary<string, AppSession>();
 
@@ -72,6 +73,29 @@ namespace Juwei.JwSocket
         {
             this.ServerAddress = ip;
             this.ServerPort = port;
+            timer = new Timer(CheckRun, null, 1000 * 30, 1000 * 10);
+        }
+
+        private void CheckRun(object obj)
+        {
+            List<string> list = new List<string>();
+            foreach (KeyValuePair<string, AppSession> item in Sessions)
+            {
+                if (!item.Value.clientSocket.Connected)
+                {
+                    list.Add(item.Key);
+                }
+            }
+            if (list.Count > 0)
+            {
+                foreach(var p in list)
+                {
+                    AppSession sn = new AppSession();
+                    Sessions.TryRemove(p, out sn);
+                    CloseSession(sn);
+                }
+                //GC.Collect();
+            }
         }
 
         public void ServerStart()
@@ -152,10 +176,8 @@ namespace Juwei.JwSocket
                                 session.Dispose();
                                 AppSession sn = new AppSession();
                                 Sessions.TryRemove(session.SessionID, out sn);
-                                sn = null;
-                                //GC.Collect();
+                                CloseSession(session);
                             }
-                            OnSessionDisConnected(new SessionDisConnected(session.SessionID, "客户端已关闭"));
                         }
                     }
                     else
@@ -163,8 +185,7 @@ namespace Juwei.JwSocket
                         session.Dispose();
                         AppSession sn = new AppSession();
                         Sessions.TryRemove(session.SessionID, out sn);
-                        sn = null;
-                        //GC.Collect();
+                        CloseSession(session);
                     }
                 }
                 else {
@@ -223,6 +244,12 @@ namespace Juwei.JwSocket
                 return Sessions[sessionid];
             else
                 return null;
+        }
+
+        public void CloseSession(AppSession session)
+        {
+            session.Dispose();
+            OnSessionDisConnected(new SessionDisConnected(session.SessionID, "客户端已关闭"));
         }
 
         private string GetString(byte[] bt, int iLength)

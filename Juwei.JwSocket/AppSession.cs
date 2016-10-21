@@ -11,7 +11,10 @@ namespace Juwei.JwSocket
     {
         public Socket clientSocket { get; set; }
         public string SessionID { get; set; }
-        public byte[] ReceBytes { get; set; }
+        //public byte[] ReceBytes { get; set; }
+
+        public int StartIndex { get; set; }
+        public int EndIndex { get; set; }
 
         public AppSession() { }
 
@@ -19,7 +22,7 @@ namespace Juwei.JwSocket
         {
             this.clientSocket = socket;
             this.SessionID = Guid.NewGuid().ToString();
-            ReceBytes = new byte[1024];
+            //ReceBytes = new byte[1024];
         }
 
         public void Send(string message, Encoding encode, bool isbyte=false)

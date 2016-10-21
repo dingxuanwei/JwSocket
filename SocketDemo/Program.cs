@@ -13,13 +13,14 @@ namespace SocketDemo
     {
         static void Main(string[] args)
         {
-            AppServer appServer = new AppServer(IPAddress.Any,8888);
+            AppServer appServer = new AppServer(IPAddress.Any, 9000);
             appServer.NewSessionConnected += AppServer_NewSessionConnected;
             appServer.ReceiveMessage += AppServer_ReceiveMessage;
             appServer.SessionDisConnected += AppServer_SessionDisConnected;
             appServer.ServerStart();
 
             Console.ReadLine();
+
         }
         private static void AppServer_NewSessionConnected(NewSessionConnected connected)
         {
