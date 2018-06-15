@@ -11,7 +11,7 @@ namespace Juwei.JwSocket
     {
         public Socket clientSocket { get; set; }
         public string SessionID { get; set; }
-        //public byte[] ReceBytes { get; set; }
+        public byte[] ReceBytes { get; set; }
 
         public int StartIndex { get; set; }
         public int EndIndex { get; set; }
